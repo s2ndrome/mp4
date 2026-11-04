@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SEOL MP4</title>
+<meta name="description" content="사진에 음악을 넣고 음향 효과·사진 효과를 입혀 MP4로 저장하는 도구">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23c0d1dc'/%3E%3Cpath d='M12 9v11.5a3.5 3.5 0 1 1-2-3.2V9l11-2v10.5a3.5 3.5 0 1 1-2-3.2V9.4z' fill='%2334495a'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&family=Do+Hyeon&family=Nanum+Pen+Script&family=Nanum+Myeongjo:wght@700&family=Gowun+Dodum&family=VT323&display=swap">
+<link rel="stylesheet" href="style.css">
+<script src="vendor/mp4-muxer.js"></script>
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand-row"><div class="brand"><b>SEOL MP4</b>사진 + 음악 → 영상</div><button class="btn ghost contact-btn" id="qa-btn">Q&amp;A</button></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="photo">사진</button>
+    <button role="tab" data-tab="look">사진 효과</button>
+    <button role="tab" data-tab="music">음악</button>
+    <button role="tab" data-tab="sound">음향 효과</button>
+    <button role="tab" data-tab="out">저장</button>
+  </nav>
+</header>
+
+<main class="work">
+  <section class="preview">
+    <h1 class="hero"><span id="hero-t">Preview</span><small id="hero-s"></small></h1>
+    <div class="pv-bar">
+      <div class="seg" id="ratio-seg">
+        <button data-ratio="9:16">9:16</button>
+        <button data-ratio="4:5">4:5</button>
+        <button data-ratio="1:1">1:1</button>
+        <button data-ratio="16:9">16:9</button>
+        <button data-ratio="photo">사진</button>
+      </div>
+      <button class="primary" id="export-btn">MP4 저장</button>
+    </div>
+    <div class="pv-stage">
+      <div class="shot" id="shot">
+        <canvas id="pv"></canvas>
+        <div class="empty" id="empty">
+          <b>사진을 넣어주세요</b>
+          <span>끌어다 놓기 · 붙여넣기(Ctrl+V) · 아래 버튼</span>
+          <label class="btn file">사진 고르기<input type="file" accept="image/*" multiple data-pick="img"></label>
+        </div>
+      </div>
+    </div>
+    <div class="player">
+      <button class="play" id="play" aria-label="재생">▶</button>
+      <input type="range" id="seek" min="0" max="1" step="0.01" value="0" aria-label="재생 위치">
+      <span class="time" id="time">0:00 / 0:00</span>
+    </div>
+    <p class="pv-hint">미리보기는 가볍게 보여주는 화면이에요. 저장하면 고화질로 다시 그려요.</p>
+  </section>
+
+  <aside class="panel">
+    <!-- 사진 -->
+    <div data-pane="photo">
+      <details class="box" open>
+        <summary>사진 <small>여러 장이면 순서대로 넘어가요</small></summary>
+        <div class="drop" id="img-drop" tabindex="0" role="button">
+          <b>사진을 여기로 끌어다 놓기</b>
+          <span>또는 눌러서 고르기 · 붙여넣기(Ctrl+V / ⌘V)</span>
+          <input type="file" accept="image/*" multiple data-pick="img" hidden>
+        </div>
+        <div class="thumbs" id="thumbs"></div>
+        <div class="btn-row"><button class="btn" id="img-link">이미지 주소로 넣기</button><button class="btn" id="img-clear">모두 지우기</button></div>
+      </details>
+      <details class="box" open>
+        <summary>화면에 맞추기</summary>
+        <div class="chips" id="fit-chips">
+          <button data-fit="cover">꽉 채우기</button>
+          <button data-fit="contain">전체 보이기</button>
+        </div>
+        <div data-show="contain">
+          <label class="f">빈 곳 배경
+            <select data-k="photo.bg">
+              <option value="blur">흐린 사진</option>
+              <option value="color">단색</option>
+            </select>
+          </label>
+          <label class="f" data-show="bgcolor">배경 색<input type="color" data-k="photo.bgColor"></label>
+        </div>
+        <label class="f">확대 <output data-out="photo.zoom" data-pct></output>%<input type="range" min="1" max="2.5" step="0.01" data-k="photo.zoom"></label>
+        <div class="grid2">
+          <label class="f">가로 위치<input type="range" min="-1" max="1" step="0.01" data-k="photo.x"></label>
+          <label class="f">세로 위치<input type="range" min="-1" max="1" step="0.01" data-k="photo.y"></label>
+        </div>
+        <p class="muted">미리보기 화면을 드래그해서 위치를 옮길 수도 있어요.</p>
+      </details>
+      <details class="box" open>
+        <summary>사진 넘김 <small>2장 이상일 때</small></summary>
+        <div class="chips" id="trans-chips">
+          <button data-trans="fade">부드럽게</button>
+          <button data-trans="cut">바로 넘김</button>
+        </div>
+        <label class="f">넘김 시간 <output data-out="photo.xfade"></output>초<input type="range" min="0.2" max="3" step="0.1" data-k="photo.xfade"></label>
+      </details>
+      <details class="box" open>
+        <summary>글자 넣기 <small>제목 · 가사 한 줄</small></summary>
+        <label class="f">문구<textarea data-k="text.content" rows="2" placeholder="비워두면 표시 안 함"></textarea></label>
+        <div class="grid2">
+          <label class="f">글꼴
+            <select data-k="text.font">
+              <option value='"Noto Sans KR", sans-serif'>기본 고딕</option>
+              <option value='"Gowun Dodum", sans-serif'>고운돋움</option>
+              <option value='"Nanum Myeongjo", serif'>명조</option>
+              <option value='"Do Hyeon", sans-serif'>도현</option>
+              <option value='"Nanum Pen Script", cursive'>손글씨</option>
+              <option value='"VT323", monospace'>픽셀</option>
+            </select>
+          </label>
+          <label class="f">위치
+            <select data-k="text.pos">
+              <option value="top">위</option>
+              <option value="center">가운데</option>
+              <option value="bottom">아래</option>
+            </select>
+          </label>
+          <label class="f">정렬
+            <select data-k="text.align">
+              <option value="left">왼쪽</option>
+              <option value="center">가운데</option>
+              <option value="right">오른쪽</option>
+            </select>
+          </label>
+          <label class="f">나타나기
+            <select data-k="text.anim">
+              <option value="none">그대로</option>
+              <option value="fade">서서히</option>
+              <option value="type">타자 치듯</option>
+            </select>
+          </label>
+          <label class="f">크기 <output data-out="text.size"></output><input type="range" min="24" max="160" step="1" data-k="text.size"></label>
+          <label class="f">색<input type="color" data-k="text.color"></label>
+        </div>
+        <div class="checks"><label><input type="checkbox" data-k="text.shadow"> 그림자</label></div>
+      </details>
+    </div>
+
+    <!-- 사진 효과 -->
+    <div data-pane="look">
+      <details class="box" open>
+        <summary>필터 <small>색감</small></summary>
+        <div class="presets" id="color-presets"></div>
+        <div class="grid2">
+          <label class="f">밝기<input type="range" min="-0.5" max="0.5" step="0.01" data-k="color.bright" data-color></label>
+          <label class="f">대비<input type="range" min="-0.5" max="0.6" step="0.01" data-k="color.contrast" data-color></label>
+          <label class="f">채도<input type="range" min="-1" max="1" step="0.01" data-k="color.sat" data-color></label>
+          <label class="f">색온도<input type="range" min="-1" max="1" step="0.01" data-k="color.warm" data-color></label>
+          <label class="f">바램<input type="range" min="0" max="1" step="0.01" data-k="color.fade" data-color></label>
+          <label class="f">빛 번짐(글로우)<input type="range" min="0" max="1" step="0.01" data-k="color.glow"></label>
+        </div>
+      </details>
+      <details class="box" open>
+        <summary>움직임 <small>여러 개 같이 켤 수 있어요</small></summary>
+        <div class="fx-grid" id="motion-grid"></div>
+        <div class="fx-on" id="motion-on"></div>
+      </details>
+      <details class="box" open>
+        <summary>효과 <small>노이즈 · 필름 · 날씨 · 음악 반응</small></summary>
+        <div class="fx-grid" id="overlay-grid"></div>
+        <div class="fx-on" id="overlay-on"></div>
+      </details>
+      <details class="box" open>
+        <summary>캠코더 날짜</summary>
+        <div class="checks"><label><input type="checkbox" data-k="stamp.on"> 오른쪽 아래 주황색 날짜 표시</label></div>
+        <div class="grid2">
+          <label class="f">날짜 문구<input type="text" data-k="stamp.text" placeholder="'98 10 24"></label>
+          <div><button class="btn" id="stamp-today">오늘 날짜</button></div>
+        </div>
+      </details>
+      <details class="box" open>
+        <summary>화면 페이드</summary>
+        <div class="grid2">
+          <label class="f">시작 <output data-out="out.vfadeIn"></output>초<input type="range" min="0" max="5" step="0.1" data-k="out.vfadeIn"></label>
+          <label class="f">끝 <output data-out="out.vfadeOut"></output>초<input type="range" min="0" max="5" step="0.1" data-k="out.vfadeOut"></label>
+        </div>
+      </details>
+      <div class="reset-row"><button class="btn" id="look-reset">사진 효과 모두 끄기</button></div>
+    </div>
+
+    <!-- 음악 -->
+    <div data-pane="music">
+      <details class="box" open>
+        <summary>음악 파일 <small>mp3 · m4a · wav · 동영상의 소리</small></summary>
+        <div class="drop" id="audio-drop" tabindex="0" role="button">
+          <b id="audio-name">음악 파일을 여기로 끌어다 놓기</b>
+          <span>또는 눌러서 고르기 · 파일은 이 브라우저 밖으로 나가지 않아요</span>
+          <input type="file" accept="audio/*,video/*,.mp3,.m4a,.wav,.ogg,.flac,.aac" data-pick="audio" hidden>
+        </div>
+        <div class="btn-row"><button class="btn" id="audio-clear">음악 빼기</button></div>
+      </details>
+      <details class="box" open id="trim-box">
+        <summary>구간 자르기</summary>
+        <canvas class="wave" id="wave"></canvas>
+        <div class="grid2">
+          <label class="f">시작 <output id="start-out">0:00</output><input type="range" min="0" max="1" step="0.01" id="trim-start"></label>
+          <label class="f">끝 <output id="end-out">0:00</output><input type="range" min="0" max="1" step="0.01" id="trim-end"></label>
+        </div>
+        <div class="btn-row">
+          <button class="btn" data-len="15">15초</button>
+          <button class="btn" data-len="30">30초</button>
+          <button class="btn" data-len="60">1분</button>
+          <button class="btn" data-len="0">전체</button>
+          <button class="btn" id="start-here">재생 위치를 시작으로</button>
+        </div>
+        <p class="muted" id="trim-info"></p>
+      </details>
+      <details class="box" open>
+        <summary>소리 크기 · 페이드</summary>
+        <label class="f">볼륨 <output data-out="sound.volume" data-pct></output>%<input type="range" min="0" max="2" step="0.01" data-k="sound.volume" data-snd></label>
+        <div class="grid2">
+          <label class="f">페이드 인 <output data-out="sound.fadeIn"></output>초<input type="range" min="0" max="8" step="0.1" data-k="sound.fadeIn" data-snd></label>
+          <label class="f">페이드 아웃 <output data-out="sound.fadeOut"></output>초<input type="range" min="0" max="8" step="0.1" data-k="sound.fadeOut" data-snd></label>
+        </div>
+      </details>
+      <details class="box" open>
+        <summary>음악 없이 만들 때</summary>
+        <label class="f">영상 길이 <output data-out="out.silentDur"></output>초<input type="range" min="3" max="60" step="1" data-k="out.silentDur"></label>
+      </details>
+    </div>
+
+    <!-- 음향 효과 -->
+    <div data-pane="sound">
+      <details class="box" open>
+        <summary>음향 효과 <small>여러 개를 겹칠 수 있어요 (켠 순서대로 적용)</small></summary>
+        <div class="fx-grid" id="sfx-grid"></div>
+        <div class="fx-on" id="sfx-on"></div>
+      </details>
+      <details class="box" open>
+        <summary>속도 · 음색</summary>
+        <div class="chips" id="speed-chips">
+          <button data-speed="0.8">슬로우 0.8×</button>
+          <button data-speed="0.9">조금 느리게</button>
+          <button data-speed="1">원래 속도</button>
+          <button data-speed="1.15">조금 빠르게</button>
+          <button data-speed="1.25">나이트코어 1.25×</button>
+        </div>
+        <label class="f">속도 <output data-out="sound.speed"></output>× <small>(음 높이도 같이 바뀌어요)</small><input type="range" min="0.5" max="1.6" step="0.01" data-k="sound.speed" data-snd></label>
+        <div class="grid2">
+          <label class="f">저음 <output data-out="sound.bass"></output>dB<input type="range" min="-12" max="12" step="0.5" data-k="sound.bass" data-snd></label>
+          <label class="f">고음 <output data-out="sound.treble"></output>dB<input type="range" min="-12" max="12" step="0.5" data-k="sound.treble" data-snd></label>
+        </div>
+        <div class="btn-row"><button class="btn" id="slowed">slowed + reverb 한 번에</button></div>
+      </details>
+      <div class="reset-row"><button class="btn" id="sound-reset">음향 효과 모두 끄기</button></div>
+    </div>
+
+    <!-- 저장 -->
+    <div data-pane="out">
+      <details class="box" open>
+        <summary>영상 설정</summary>
+        <label class="f">화면 비율
+          <select data-k="out.ratio">
+            <option value="9:16">9:16 세로 (릴스·쇼츠·스토리)</option>
+            <option value="4:5">4:5 세로 (피드)</option>
+            <option value="1:1">1:1 정사각형</option>
+            <option value="16:9">16:9 가로 (유튜브)</option>
+            <option value="photo">첫 사진 비율 그대로</option>
+          </select>
+        </label>
+        <div class="grid2">
+          <label class="f">화질
+            <select data-k="out.res">
+              <option value="720">720p (빠름)</option>
+              <option value="1080">1080p (고화질)</option>
+            </select>
+          </label>
+          <label class="f">초당 프레임
+            <select data-k="out.fps">
+              <option value="24">24 (영화 느낌)</option>
+              <option value="30">30</option>
+            </select>
+          </label>
+        </div>
+        <label class="f">파일 이름<input type="text" data-k="out.name" placeholder="my-video"></label>
+        <p class="muted" id="out-info"></p>
+      </details>
+      <details class="box" open>
+        <summary>지금 설정 요약</summary>
+        <div id="summary" class="summary"></div>
+      </details>
+      <button class="primary big" id="export-btn2">MP4 저장</button>
+      <p class="muted" id="support"></p>
+    </div>
+  </aside>
+</main>
+
+<footer class="foot">사진과 음악은 이 브라우저 안에서만 처리되고 어디에도 올라가지 않아요.</footer>
+
+<div class="drop-cover" id="drop-cover" hidden><b>여기에 놓으면 추가돼요</b><span>사진은 사진 목록으로 · 음악은 음악으로</span></div>
+
+<div class="modal" id="exp-modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head"><b id="exp-title">영상 만드는 중</b><button data-close-modal id="exp-x" aria-label="닫기">✕</button></div>
+    <div id="exp-run">
+      <div class="bar"><i id="exp-bar"></i></div>
+      <p class="muted" id="exp-label">준비 중…</p>
+      <div class="btn-row"><button class="btn" id="exp-cancel">취소</button></div>
+    </div>
+    <div id="exp-done" hidden>
+      <video id="exp-video" controls playsinline></video>
+      <p class="muted" id="exp-note"></p>
+      <div class="btn-row">
+        <a class="btn primary" id="exp-dl" download>다운로드</a>
+        <button class="btn" id="exp-share" hidden>공유 · 사진 앱에 저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="link-modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head"><b>이미지 주소로 넣기</b><button data-close-modal aria-label="닫기">✕</button></div>
+    <label class="f">이미지 주소<input type="text" id="link-url" placeholder="https://…/photo.jpg"></label>
+    <p class="muted">다른 사이트 이미지는 그 사이트가 막아두면 못 가져와요. 그럴 땐 이미지를 복사해서 붙여넣거나 저장한 뒤 넣어주세요.</p>
+    <p class="link-err" id="link-err" hidden></p>
+    <div class="btn-row"><button class="primary" id="link-go">넣기</button><button class="btn" data-close-modal>취소</button></div>
+  </div>
+</div>
+
+<div class="modal" id="qa-modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head"><b>Q&amp;A</b><button data-close-modal aria-label="닫기">✕</button></div>
+    <div class="qa-list">
+      <div class="qa"><p class="qa-q">사진이나 음악이 서버로 올라가나요?</p><p class="qa-a">아니요. 모든 작업은 이 브라우저 안에서만 해요. 인터넷이 느려도 저장 속도는 상관없어요.</p></div>
+      <div class="qa"><p class="qa-q">어떤 브라우저가 좋아요?</p><p class="qa-a">크롬·엣지(컴퓨터·안드로이드)와 사파리 최신 버전에서 MP4(H.264 + AAC)로 빠르게 만들어져요. 지원이 안 되는 브라우저는 실시간으로 녹화하고, 그 경우 WebM으로 저장될 수 있어요.</p></div>
+      <div class="qa"><p class="qa-q">저장이 오래 걸려요.</p><p class="qa-a">곡이 길고 효과가 많을수록 오래 걸려요. 화질을 720p로 낮추거나, 음악 탭에서 필요한 구간만 잘라보세요. 저장 중엔 이 탭을 열어두세요.</p></div>
+      <div class="qa"><p class="qa-q">음악 파일이 안 열려요.</p><p class="qa-a">브라우저가 읽을 수 있는 형식(mp3, m4a, wav, ogg 등)이어야 해요. 동영상 파일을 넣으면 소리만 꺼내 써요. 유튜브·스트리밍 주소는 넣을 수 없어요.</p></div>
+      <div class="qa"><p class="qa-q">아이폰에서 사진 앱에 저장하고 싶어요.</p><p class="qa-a">저장이 끝나면 나오는 '공유 · 사진 앱에 저장' 버튼을 눌러 '비디오 저장'을 고르세요.</p></div>
+      <div class="qa"><p class="qa-q">설정이 기억되나요?</p><p class="qa-a">효과·필터 같은 설정은 이 브라우저에 기억돼요. 사진과 음악 파일은 저장되지 않으니 다시 넣어주세요.</p></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
